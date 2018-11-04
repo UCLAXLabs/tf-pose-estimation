@@ -38,30 +38,47 @@ if __name__ == '__main__':
     #ret_val, image = cap.read()
     #logger.info('cam image=%dx%d' % (image.shape[1], image.shape[0]))
 
+    targetFramerate = 30 # fps
+
     seconds = 1
     fps = cap.get(cv2.CAP_PROP_FPS) # Gets the frames per second
-    multiplier = int(round(fps * seconds))
+
+    skipRatio = int(round(float(fps) / float(targetFramerate)))
 
     with open("figures.json", "w") as figuresFile:
         figuresFile.write("[\n")
     figuresFile.close()
 
+    firstFrame = True
+
     if (cap.isOpened()== False):
         print("Error opening video stream or file")
+
+    frameCount = 0
     while(cap.isOpened()):
+
         ret_val, image = cap.read()
+
+        frameCount += 1
 
         frameId = int(round(cap.get(1))) 
 
-        print("frameID",frameId,"multiplier",multiplier)
-            
+        if ((frameCount % skipRatio) != 0):
+            print("skipping frame",frameId,"count",frameCount,"skip rato",skipRatio)
+            continue
+        else:
+            print("processing frame",frameId,"count",frameCount)
+
         fps_time = time.time()
 
         #if frameId % multiplier == 0:
         if True:
             timeFigures = {}
 
-            humans = e.inference(image)
+            try:
+              humans = e.inference(image)
+            except:
+              break
             #image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
 
             image = TfPoseEstimator.draw_human_clouds(image, humans, imgcopy=False)
@@ -82,7 +99,11 @@ if __name__ == '__main__':
             #    break
             with open("figures.json", "a") as figuresFile:
                 outStr = json.dumps(timeFigures)
-                figuresFile.write(outStr + "\n")
+                if (not firstFrame):
+                  figuresFile.write("," + outStr + "\n")
+                else:
+                  figuresFile.write(outStr + "\n")
+                  firstFrame = False
 
     cv2.destroyAllWindows()
 
