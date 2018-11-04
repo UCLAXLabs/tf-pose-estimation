@@ -404,6 +404,76 @@ class TfPoseEstimator:
 
         return npimg
 
+
+    # PMB
+    @staticmethod
+    def draw_human_clouds(npimg, humans, imgcopy=False):
+        if imgcopy:
+            npimg = np.copy(npimg)
+        image_h, image_w = npimg.shape[:2]
+        for human in humans:
+            centers = []
+            # draw point
+            for i in range(common.CocoPart.Background.value):
+                if i not in human.body_parts.keys():
+                    continue
+
+                body_part = human.body_parts[i]
+                center = (int(body_part.x * image_w + 0.5), int(body_part.y * image_h + 0.5))
+                centers.append(center)
+                cv2.circle(npimg, center, 3, common.CocoColors[i], thickness=3, lineType=8, shift=0)
+
+            #bodyPoints = np.array(centers)
+            Xs = [int(el[0]) for el in centers]
+            Ys = [int(el[1]) for el in centers]
+            #bodyTri = Triangulation(bodyPoints[:,0], bodyPoints[:,1])
+            try:
+                bodyTri = Triangulation(Xs, Ys)
+                for edge in bodyTri.edges:
+                    e0 = centers[edge[0]]
+                    e1 = centers[edge[1]]
+                    #print(edge)
+                    #e0 = (edge[0][0], edge[0][1])
+                    #e1 = (edge[1][0], edge[1][1])
+                    npimg = cv2.line(npimg, e0, e1, common.CocoColors[i], 2)
+            except:
+                pass
+
+        return npimg
+
+    # Return a list of the figures and locations of their main points and
+    # connectors
+    @staticmethod
+    def get_figures(npimg, humans):
+        image_h, image_w = npimg.shape[:2]
+        figures = []
+        centers = {}
+        for human in humans:
+            thisFigure = {'parts': {}, 'connections': []}
+
+            for i in range(CocoPart.Background.value):
+                if i not in human.body_parts.keys():
+                    continue
+
+                body_part = human.body_parts[i]
+                center = (int(body_part.x * image_w + 0.5), int(body_part.y * image_h + 0.5))
+                centers[i] = center
+
+                thisFigure['parts'][str(i)] = (center, CocoPart(i).name)
+
+
+            for pair_order, pair in enumerate(common.CocoPairsRender):
+                if pair[0] not in human.body_parts.keys() or pair[1] not in human.body_parts.keys():
+                    continue
+
+                #thisFigure['connections'][CocoPart(pair[0]).name + '<->' + CocoPart(pair[1]).name] = [centers[pair[0]], centers[pair[1]]]
+                thisFigure['connections'].append([[pair[0], pair[1]], [centers[pair[0]], centers[pair[1]]]])
+
+            figures.append(thisFigure)
+
+        return figures
+
+
     def _get_scaled_img(self, npimg, scale):
         get_base_scale = lambda s, w, h: max(self.target_size[0] / float(h), self.target_size[1] / float(w)) * s
         img_h, img_w = npimg.shape[:2]

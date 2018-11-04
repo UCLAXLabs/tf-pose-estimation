@@ -62,15 +62,13 @@ if __name__ == '__main__':
             timeFigures = {}
 
             humans = e.inference(image)
-            image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
+            #image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
 
-            # Used to draw triangulated positions instead of skeletons
-            #image = TfPoseEstimator.draw_human_clouds(image, humans, imgcopy=False)
+            image = TfPoseEstimator.draw_human_clouds(image, humans, imgcopy=False)
 
-            # Used to export the figures' limb location data
-            #figures = TfPoseEstimator.get_figures(image, humans)
+            figures = TfPoseEstimator.get_figures(image, humans)
 
-            #timeFigures[str(frameId)] = figures
+            timeFigures[str(frameId)] = figures
 
             #logger.debug('show+')
             cv2.putText(image,
@@ -82,9 +80,9 @@ if __name__ == '__main__':
             fps_time = time.time()
             #if cv2.waitKey(1) == 27:
             #    break
-            #with open("figures.json", "a") as figuresFile:
-            #    outStr = json.dumps(timeFigures)
-            #    figuresFile.write(outStr + "\n")
+            with open("figures.json", "a") as figuresFile:
+                outStr = json.dumps(timeFigures)
+                figuresFile.write(outStr + "\n")
 
     cv2.destroyAllWindows()
 
