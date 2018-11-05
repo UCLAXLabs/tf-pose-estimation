@@ -40,10 +40,14 @@ if __name__ == '__main__':
 
     targetFramerate = 30 # fps
 
-    seconds = 1
     fps = cap.get(cv2.CAP_PROP_FPS) # Gets the frames per second
 
     skipRatio = int(round(float(fps) / float(targetFramerate)))
+    
+    outputFrameDuration = 1 / float(targetFramerate) # .0333333 ...
+    sourceFrameDuration = 1 / float(fps) # .016672224 ...
+
+    #skipRemainder = float(targetFramerate) - (float(fps) % float(targetFramerate))
 
     with open("figures.json", "w") as figuresFile:
         figuresFile.write("[\n")
@@ -54,6 +58,9 @@ if __name__ == '__main__':
     if (cap.isOpened()== False):
         print("Error opening video stream or file")
 
+    outputTimecode = 0
+    sourceTimecode = 0
+
     frameCount = 0
     while(cap.isOpened()):
 
@@ -61,49 +68,56 @@ if __name__ == '__main__':
 
         frameCount += 1
 
+        sourceTimecode += sourceFrameDuration
+
         frameId = int(round(cap.get(1))) 
 
         if ((frameCount % skipRatio) != 0):
-            print("skipping frame",frameId,"count",frameCount,"skip rato",skipRatio)
-            continue
-        else:
-            print("processing frame",frameId,"count",frameCount)
+
+            if ((sourceTimecode - outputTimecode) > outputFrameDuration):
+                print("sourceTimecode",sourceTimecode,"outputTimecode",outputTimecode,"outputFrameDuration",outputFrameDuration,"not skipping")
+            else:
+                print("skipping frame",frameId,"count",frameCount,"skip rato",skipRatio)
+                continue
+
+        print("processing frame",frameId,"count",frameCount)
+
+        outputTimecode += outputFrameDuration
 
         fps_time = time.time()
 
-        #if frameId % multiplier == 0:
-        if True:
-            timeFigures = {}
+        timeFigures = {}
 
-            try:
-              humans = e.inference(image)
-            except:
-              break
-            #image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
+        try:
+            humans = e.inference(image)
+        except:
+            break
 
-            image = TfPoseEstimator.draw_human_clouds(image, humans, imgcopy=False)
+        image = TfPoseEstimator.draw_humans(image, humans, imgcopy=False)
 
-            figures = TfPoseEstimator.get_figures(image, humans)
+        #image = TfPoseEstimator.draw_human_clouds(image, humans, imgcopy=False)
 
-            timeFigures[str(frameId)] = figures
+        figures = TfPoseEstimator.get_figures(image, humans)
 
-            #logger.debug('show+')
-            cv2.putText(image,
-                    "FPS: %f" % (1.0 / (time.time() - fps_time)),
-                    (10, 10),  cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                    (0, 255, 0), 2)
-            #cv2.imshow('tf-pose-estimation result', image)
-            cv2.imwrite('video_figures/' + str(fps_time) + '.jpg', image)
-            fps_time = time.time()
-            #if cv2.waitKey(1) == 27:
-            #    break
-            with open("figures.json", "a") as figuresFile:
-                outStr = json.dumps(timeFigures)
-                if (not firstFrame):
-                  figuresFile.write("," + outStr + "\n")
-                else:
-                  figuresFile.write(outStr + "\n")
-                  firstFrame = False
+        timeFigures[str(frameId)] = figures
+
+        #logger.debug('show+')
+        cv2.putText(image,
+                "FPS: %f" % (1.0 / (time.time() - fps_time)),
+                (10, 10),  cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                (0, 255, 0), 2)
+        #cv2.imshow('tf-pose-estimation result', image)
+        cv2.imwrite('video_figures/' + str(fps_time) + '.jpg', image)
+        fps_time = time.time()
+        #if cv2.waitKey(1) == 27:
+        #    break
+        with open("figures.json", "a") as figuresFile:
+            outStr = json.dumps(timeFigures)
+            if (not firstFrame):
+                figuresFile.write("," + outStr + "\n")
+            else:
+                figuresFile.write(outStr + "\n")
+                firstFrame = False
 
     cv2.destroyAllWindows()
 
