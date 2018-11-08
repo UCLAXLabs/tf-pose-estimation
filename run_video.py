@@ -43,11 +43,18 @@ if __name__ == '__main__':
 
     cap = cv2.VideoCapture(args.video)
 
-    targetFramerate = 30 # fps
+    targetFramerate = 30 # In frames per second, currently hard-coded here
 
     fps = cap.get(cv2.CAP_PROP_FPS) # Gets the frames per second
+    print("Input FPS",fps)
+
+    if (targetFramerate > fps):
+      targetFramerate = fps
+
+    print("Target output frame rate:",targetFramerate)
 
     skipRatio = int(round(float(fps) / float(targetFramerate)))
+    print("Ratio of skipped frames:",skipRatio)
 
     outputFrameDuration = 1 / float(targetFramerate) # .0333333 ...
     sourceFrameDuration = 1 / float(fps) # .016672224 ...
@@ -97,7 +104,7 @@ if __name__ == '__main__':
             print(len(humans),"figures detected")
             figures = TfPoseEstimator.get_figures(image, humans)
         except:
-            print("Error with inference")
+            print("Error with inference, possibly out of video")
             break
 
         print(len(humans),"humans detected")
@@ -112,7 +119,7 @@ if __name__ == '__main__':
         cv2.imwrite('video_figures/' + str(fps_time) + '.jpg', image)
         fps_time = time.time()
 
-        timeFigures[str(frameId)] = figures
+        timeFigures[str(outputTimecode)] = figures
 
         with open("figures.json", "a") as figuresFile:
             outStr = json.dumps(timeFigures)
@@ -128,7 +135,6 @@ if __name__ == '__main__':
     cv2.destroyAllWindows()
 
 with open("figures.json", "a") as figuresFile:
-    figuresFile.write("\n]")
-
+    figuresFile.write("]")
 
 logger.debug('finished+')
